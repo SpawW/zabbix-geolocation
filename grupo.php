@@ -30,6 +30,19 @@ error_reporting(0);
 $hosts = new Grupos();
 $hosts->get_hosts($_POST['grupo']);
 
+//Read configuracao de weather
+$ponteiro = fopen ("geolocation.conf","r");
+while (!feof ($ponteiro)) {
+	$linha = fgets($ponteiro,4096);
+	$tamLinha = strlen($linha);
+	$posIgual = strpos($linha,'=');
+	$chave = substr($linha,0,$posIgual);
+ 	if ( $chave == "weather") {
+		$vChaveWeather = substr($linha,$posLinha+1+$posIgual);
+		//echo $chave.'='.$vChaveWeather.'<br>';
+	}
+}//fim while
+
 ?>
 
 <script type="text/javascript">
@@ -94,6 +107,21 @@ $(document).ready(function(){
 
 	var map = new google.maps.Map(document.getElementById("pagina-grupo-mapa"), myOptions);
 
+	//ADD_WEATHER - Camadas com a previsao do tempo atual para a area exibida
+			<?php
+			if (substr($vChaveWeather,0,3)=="yes") {
+			?>			
+				var weatherLayer = new google.maps.weather.WeatherLayer({
+					temperatureUnits: google.maps.weather.TemperatureUnit.CELCIUS
+				});
+				weatherLayer.setMap(map);
+				var cloudLayer = new google.maps.weather.CloudLayer();   
+				cloudLayer.setMap(map);					
+			<?php
+				}
+			?>
+        //
+
 	var oms = new OverlappingMarkerSpiderfier(map,
 		      {markersWontMove: true, markersWontHide: true});
 
@@ -150,6 +178,10 @@ $(document).ready(function(){
 
 	<?php 
 		for ($i = 0; $i < $hosts->qtd_hosts; $i++) {
+		if ($hosts->ip[$i] == "") {
+                    $hosts->ip[$i]=gethostbyname($hosts->dns[$i]);
+                }
+
 	?>  
 			var ll = new google.maps.LatLng(<?=$hosts->lat[$i]?>, <?=$hosts->lon[$i]?>);
 			bounds.extend(ll);

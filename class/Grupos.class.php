@@ -20,6 +20,9 @@
 ** Contacts:
 ** Leandro Alves Machado - Analista de Sistemas - leandro.machado@sspds.ce.gov.br
 ** Aristoteles Araujo - Analista de Sistemas - aristoteles.araujo@sspds.ce.gov.br
+** 
+** Colaborações:
+** Jacó Ramos <j4c0r4m0s@gmail.com>
 **
 **/
 ?>
@@ -78,7 +81,7 @@ class Grupos extends Conexao {
 			$informacao[$i] = rtrim(substr($texto[$i], strpos($texto[$i],'=') + 1));
 		}
 		
-		$query = "SELECT HG.hostgroupid, HG.hostid, HG.groupid, H.host, I.ip, HI.location_lat, HI.location_lon 
+		$query = "SELECT HG.hostgroupid, HG.hostid, HG.groupid, H.host, I.ip, I.dns, HI.location_lat, HI.location_lon 
 				  FROM hosts_groups as HG , hosts as H, interface as I, host_inventory as HI
 				  WHERE HG.groupid = ".$grupo." 
 				  AND HG.hostid = H.hostid 
@@ -90,14 +93,17 @@ class Grupos extends Conexao {
 
 		if ($this->zdbtype=='MYSQL') {
 			$res = mysql_query($query);
+			$dbtype_func = "mysql_fetch_array"; //0.3.5
 		} elseif ($this->zdbtype=='POSTGRESQL') { 
 			$res = pg_query($query);
+			$dbtype_func = "pg_fetch_array"; //0.3.5
 		}
 		
-		while ($dados = mysql_fetch_array($res)) {
+		while ($dados = $dbtype_func($res)) { //0.3.5
 			$hostid[]	=	$dados["hostid"];		
 			$host[]		=	$dados["host"];
 			$ip[]		=	$dados["ip"];
+			$dns[]          =       $dados["dns"];
 			$lat[]		=	$dados["location_lat"];
 			$lon[]		=	$dados["location_lon"];
 		}
@@ -114,6 +120,7 @@ class Grupos extends Conexao {
 		$this->hostid		=	$hostid;
 		$this->host		=	$host;
 		$this->ip		=	$ip;
+		$this->dns		=	$dns;
 		$this->lat		=	$lat;
 		$this->ponto_lat	=	$ponto_lat;
 		$this->lon		=	$lon;
@@ -122,7 +129,13 @@ class Grupos extends Conexao {
 		
 		for ($i = 0; $i < $this->qtd_hosts; $i++) {
 			
-			$this->cmd[$i] = 'fping -r 1 -b '.$informacao['5'].' -t '.$informacao['6'].' ' . $this->ip[$i];
+			if ($this->ip[$i] <> "") {
+				$this->cmd[$i] = 'fping -r 1 -b '.$informacao['5'].' -t '.$informacao['6'].' ' . $this->ip[$i];
+                        } else {
+				$this->cmd[$i] = 'fping -r 1 -b '.$informacao['5'].' -t '.$informacao['6'].' ' . $this->dns[$i];
+                        }
+			
+			//$this->cmd[$i] = 'fping -r 1 -b '.$informacao['5'].' -t '.$informacao['6'].' ' . $this->ip[$i];
 			//echo $this->cmd[$i] . "<br>";
 			exec($this->cmd[$i],$this->saida[$i],$this->retorno);
 			$this->status[$i] = $this->retorno;
